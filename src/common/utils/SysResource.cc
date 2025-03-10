@@ -111,6 +111,9 @@ Result<std::vector<SysResource::DiskInfo>> SysResource::scanDiskInfo() {
     std::string device;
     std::string uuid;
     if (scn::scan(line, "{} {}", device, uuid) && !device.empty() && uuid.size() >= 7) {
+      if (device.starts_with("/dev/dm-0")) {
+        device = "/dev/mapper/gpu-gpu_volume:";
+      }
       deviceToUUID[device.substr(0, device.size() - 1)] = uuid.substr(6, uuid.size() - 7);
     }
   }
@@ -139,6 +142,12 @@ Result<std::vector<SysResource::DiskInfo>> SysResource::scanDiskInfo() {
       if (!parseResult) {
         XLOGF(ERR, "Parse deviceIdStr {} failed", deviceIdStr);
         return makeError(StatusCode::kUnknown);
+      }
+
+      XLOGF(ERR, "parse {} {} {}", deviceIdStr, mountPath, devicePath);
+      if (devicePath == "/dev/mapper/gpu-gpu_volume" && mountPath != "/data1") {
+        XLOGF(ERR, "{} should pass", mountPath);
+        continue;
       }
 
       if (deviceToUUID.count(devicePath)) {
